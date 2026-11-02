@@ -1,26 +1,230 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Couple Things — tokens
+   Direction: "The page is the object" (seed 1485421638)
+   Palette substituted from the subject (letter paper, ink,
+   sealing wax) keeping the dealt proportions: one ground that
+   holds the most, one ink, one accent on small things only,
+   full flat fields that alternate. Two-colour-print discipline.
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colour */
+  --paper: #f1ece6;
+  --paper-step: #e5ded4;
+  --ink: #2a1b21;
+  --muted: #594349;
+  --accent: #a83048;
+  --accent-ink: #fdf7f0;
+
+  --field-dark: #2a1b21;
+  --field-dark-ink: #f1ece6;
+  --field-rose: #e3bfc7;
+  --field-rose-ink: #2a1b21;
+
+  /* Type: five steps, no more */
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2rem, 1.3rem + 3.2vw, 4rem);
+  --step-display: clamp(2.75rem, 1.4rem + 6.2vw, 6.5rem);
+
+  /* Frame: one pair of margins for the whole site */
+  --margin: clamp(1rem, 4vw, 4.5rem);
+  --measure: 34ch;
+  --section-gap: clamp(4.5rem, 7vw, 7.5rem);
+
+  /* Decided once: paper has square corners */
+  --radius: 0px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+* { box-sizing: border-box; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--step-body);
+  line-height: 1.5;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p { margin: 0; }
+
+a { color: inherit; }
+
+img { display: block; max-width: 100%; }
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- shared bits ---------- */
+
+.wrap {
+  width: 100%;
+  padding-inline: var(--margin);
+  margin-inline: auto;
+  max-width: 96rem;
+}
+
+.display { font-size: var(--step-display); }
+.head { font-size: var(--step-head); }
+.lead { font-size: var(--step-lead); line-height: 1.25; }
+.small { font-size: var(--step-small); }
+.hand { font-family: var(--font-hand), cursive; letter-spacing: 0; }
+
+.ink-muted { color: var(--muted); }
+
+/* Buttons: flat, one fill, square corners, decided once */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  padding: 0.95rem 1.6rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+.btn:hover { background: #8f2740; }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+.btn-plain {
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 1px;
+  padding: 0.95rem 0;
+}
+.btn-plain:hover { background: transparent; color: var(--accent); }
+
+/* Fields alternate, nothing fades into anything */
+.field-dark { background: var(--field-dark); color: var(--field-dark-ink); }
+.field-rose { background: var(--field-rose); color: var(--field-rose-ink); }
+.field-dark .ink-muted { color: #b9a6ab; }
+
+/* Motion: entrance for the parts of every section */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1),
+              transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+.slip-group { margin-top: 1.75rem; }
+.menu-group { margin-top: 2.75rem; }
+
+/* FAQ: a narrow heading column answered by a full field of reading text */
+.faq-grid {
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .faq-grid { grid-template-columns: 1fr; }
+}
+
+/* FAQ set as continuous reading text, two columns, no toggles */
+.faq-columns > div {
+  columns: 2;
+  column-gap: 56px;
+}
+@media (max-width: 900px) {
+  .faq-columns > div { columns: 1; }
+}
+
+/* ---------- the object: an envelope / letter panel ---------- */
+
+.sheet {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+}
+
+/* torn-off slip: straight top, zigzag bottom */
+.slip-zigzag {
+  clip-path: polygon(
+    0 0, 100% 0, 100% calc(100% - 14px),
+    96% 100%, 92% calc(100% - 14px), 88% 100%, 84% calc(100% - 14px),
+    80% 100%, 76% calc(100% - 14px), 72% 100%, 68% calc(100% - 14px),
+    64% 100%, 60% calc(100% - 14px), 56% 100%, 52% calc(100% - 14px),
+    48% 100%, 44% calc(100% - 14px), 40% 100%, 36% calc(100% - 14px),
+    32% 100%, 28% calc(100% - 14px), 24% 100%, 20% calc(100% - 14px),
+    16% 100%, 12% calc(100% - 14px), 8% 100%, 4% calc(100% - 14px), 0 100%
+  );
+}
+
+/* menu sheet: scalloped top and bottom.
+   taste-skill-ignore — these are mask stops that cut the paper's edge into
+   scallops, not a gradient fill. The sheet itself is one flat colour. */
+.sheet-scallop {
+  --s: 18px;
+  mask:
+    radial-gradient(var(--s) at 50% 0, #0000 99%, #000 101%) 50% 0 / calc(2 * var(--s)) var(--s) repeat-x, /* taste-skill-ignore: mask stop, cuts the paper edge */
+    radial-gradient(var(--s) at 50% 100%, #0000 99%, #000 101%) 50% 100% / calc(2 * var(--s)) var(--s) repeat-x, /* taste-skill-ignore: mask stop, cuts the paper edge */
+    linear-gradient(#000 0 0) 50% 50% / 100% calc(100% - 2 * var(--s)) no-repeat; /* taste-skill-ignore: mask stop, keeps the sheet body */
+}
+
+/* dotted leader between a name and its value */
+.leader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: 100%;
+}
+.leader > .leader-fill {
+  flex: 1;
+  border-bottom: 4px dotted currentColor;
+  opacity: 0.35;
+  transform: translateY(-0.25em);
+}
+.leader > .leader-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* the wax seal, drawn — the one place a round shape is allowed */
+.seal {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-hand), cursive;
+  font-size: 1.9rem;
+  line-height: 1;
+  transform: rotate(-8deg);
 }

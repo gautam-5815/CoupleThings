@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Love Website</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #374151;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(to bottom right, #fbcfe8, #e9d5ff, #f9a8d4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Floating emojis */
+    .floaters { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .floating-element {
+      position: absolute;
+      bottom: -40px;
+      animation-name: floatUp;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      opacity: .5;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0) scale(1); opacity: 0; }
+      10%  { opacity: .6; }
+      50%  { opacity: .8; }
+      100% { transform: translateY(-120vh) scale(1.2); opacity: 0; }
+    }
+
+    /* Navbar */
+    nav {
+      width: 100%;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, .4);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+      position: relative;
+      z-index: 1;
+    }
+    nav h1 { font-size: 1.5rem; font-weight: 600; color: #e11d48; }
+    nav p  { font-size: 1.125rem; font-weight: 500; color: #9333ea; }
+
+    /* Shared */
+    .stage {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2.5rem;
+      overflow: hidden;
+    }
+    .blob { position: absolute; width: 24rem; height: 24rem; border-radius: 9999px; filter: blur(64px); opacity: .4; }
+    .blob.pink   { top: -8rem; left: -8rem; background: #f9a8d4; }
+    .blob.purple { bottom: 0; right: -8rem; background: #d8b4fe; }
+
+    .card {
+      background: rgba(255, 255, 255, .9);
+      backdrop-filter: blur(24px);
+      border-radius: 3rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+    }
+
+    .btn {
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      border-radius: 9999px;
+      font-weight: 500;
+      font-family: inherit;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1);
+      transition: all .3s;
+    }
+    .btn.hover:hover { transform: scale(1.05); }
+    .btn-pink   { background: linear-gradient(to right, #ec4899, #f43f5e); }
+    .btn-green  { background: linear-gradient(to right, #4ade80, #10b981); }
+    .btn-purple { background: linear-gradient(to right, #a855f7, #ec4899); }
+
+    /* Slide screen */
+    .slide-grid {
+      position: relative;
+      max-width: 80rem;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    @media (min-width: 768px) { .slide-grid { grid-template-columns: 1fr 1fr; } }
+    .photo-wrap { display: flex; justify-content: center; }
+    .photo-card {
+      width: 440px;
+      max-width: 100%;
+      height: 560px;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-card img { width: 100%; height: 100%; object-fit: contain; border-radius: 2.5rem; }
+    .photo-placeholder {
+      width: 100%; height: 100%;
+      border-radius: 2.5rem;
+      background: linear-gradient(135deg, #fce7f3, #f3e8ff);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem;
+      color: #be185d; font-size: 1rem; text-align: center; padding: 1rem;
+    }
+    .photo-placeholder span { font-size: 4rem; }
+    .text-card { padding: 3rem; }
+    .text-card p {
+      font-size: 2.25rem;
+      font-weight: 500;
+      color: #374151;
+      line-height: 1.625;
+      margin-bottom: 3rem;
+      white-space: pre-line;
+    }
+    .text-card .btn { padding: 1rem 3.5rem; font-size: 1.5rem; }
+
+    /* Question screen */
+    .center-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 5rem 2.5rem;
+    }
+    .question-card { position: relative; padding: 3.5rem; text-align: center; max-width: 36rem; width: 100%; }
+    .question-card h2 { font-size: 2.25rem; font-weight: 600; color: #374151; margin-bottom: 3.5rem; }
+    .answers {
+      position: relative;
+      height: 10rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+    }
+    .answers .btn { padding: 1rem 3rem; font-size: 1.5rem; white-space: nowrap; }
+    .answers .yes { z-index: 10; }
+    .answers .no.runaway { position: absolute; transform: translate(-50%, -50%); }
+    .hint { margin-top: 2.5rem; font-size: 1.125rem; color: #6b7280; font-style: italic; }
+
+    /* Celebration screen */
+    .celebrate-card {
+      padding: 3.5rem;
+      text-align: center;
+      max-width: 42rem;
+      width: 100%;
+      opacity: 0;
+      transform: scale(.95);
+      transition: all .7s;
+    }
+    .celebrate-card.show { opacity: 1; transform: scale(1); }
+    .celebrate-card img { width: 100%; max-height: 300px; object-fit: contain; margin-bottom: 2.5rem; }
+    .celebrate-emoji { font-size: 6rem; margin-bottom: 2.5rem; }
+    .celebrate-card h1 { font-size: 2.25rem; font-weight: 600; color: #374151; margin-bottom: 1.5rem; }
+    .celebrate-card p { font-size: 1.5rem; color: #e11d48; margin-bottom: 2.5rem; }
+    .celebrate-card .btn { padding: 1rem 2.5rem; font-size: 1.25rem; }
+
+    @media (max-width: 640px) {
+      nav { padding: 1rem; }
+      nav h1 { font-size: 1.25rem; }
+      nav p { font-size: .95rem; }
+      .stage, .center-screen { padding: 2rem 1rem; }
+      .slide-grid { gap: 2rem; }
+      .photo-card { height: 420px; padding: 1rem; }
+      .text-card { padding: 2rem; }
+      .text-card p, .question-card h2, .celebrate-card h1 { font-size: 1.6rem; }
+      .question-card, .celebrate-card { padding: 2rem; }
+      .answers .btn { padding: .85rem 2rem; font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="floaters" id="floaters"></div>
+    <nav>
+      <h1 id="nav-title"></h1>
+      <p id="nav-subtitle"></p>
+    </nav>
+    <main id="screen" style="flex:1; display:flex; flex-direction:column;"></main>
+  </div>
+
+  <script>
+    // ===== Edit everything here =====
+    // Put your photos in an "images" folder next to this file (img1.jpg ... img5.jpg, celebration.png).
+    // If a photo is missing, a cute placeholder is shown instead.
+    const CONFIG = {
+      navTitle: "Szivii 💗",
+      navSubtitle: "Love you cutiee 💕",
+      slides: [
+        { image: "images/img1.jpg", text: "Hiiii Goluuuu, Just wanted to tell you somethingggg..." },
+        { image: "images/img2.jpg", text: "Do you remember this picture? Our first picture that you took ✨" },
+        { image: "images/img3.jpg", text: "Our first trip as a hackathon... 🥺" },
+        { image: "images/img4.jpg", text: "A day full of enjoyymenttt 😌" },
+        { image: "images/img5.jpg", text: "Yeah, sometimes I do things that make you angry, and I am sorry for that. But just like this image, I choose US. So maaf kar de goluu ❤️" },
+      ],
+      question: "Kya ab tumhari narazagi kahatm ho gyii? 🥺",
+      yesText: "Yes ❤️",
+      noText: "No 😤",
+      noAttempts: 5,
+      noGoneHint: "Ab to sirf ek hi jawab bachta hai… 😌💖",
+      celebrationImage: "images/celebration.png",
+      celebrationTitle: "Mujhe pata tha tum zyada der naraz nahi reh sakti 🥹💖",
+      celebrationSubtitle: "Ab bas smiles hi smiles 🎉❤️",
+      floatingEmojis: ["💗", "🍬", "🧸", "💖", "✨"],
+    };
+    // ================================
+
+    const screen = document.getElementById("screen");
+    document.getElementById("nav-title").textContent = CONFIG.navTitle;
+    document.getElementById("nav-subtitle").textContent = CONFIG.navSubtitle;
+
+    // Floating background emojis
+    const floaters = document.getElementById("floaters");
+    for (let i = 0; i < 20; i++) {
+      const s = document.createElement("span");
+      s.className = "floating-element";
+      s.textContent = CONFIG.floatingEmojis[Math.floor(Math.random() * CONFIG.floatingEmojis.length)];
+      s.style.left = Math.random() * 100 + "%";
+      s.style.animationDelay = Math.random() * 10 + "s";
+      s.style.animationDuration = Math.random() * 10 + 15 + "s";
+      s.style.fontSize = Math.random() * 20 + 16 + "px";
+      floaters.appendChild(s);
+    }
+
+    function el(tag, props = {}, children = []) {
+      const node = document.createElement(tag);
+      Object.assign(node, props);
+      children.forEach((c) => node.appendChild(typeof c === "string" ? document.createTextNode(c) : c));
+      return node;
+    }
+
+    function photo(src, alt, fallbackEmoji) {
+      const img = el("img", { src, alt });
+      img.onerror = () => {
+        img.replaceWith(
+          el("div", { className: "photo-placeholder" }, [
+            el("span", { textContent: fallbackEmoji }),
+            el("div", { textContent: "Add your photo: " + src }),
+          ])
+        );
+      };
+      return img;
+    }
+
+    let slideIndex = 0;
+
+    function showSlide() {
+      const { image, text } = CONFIG.slides[slideIndex];
+      const next = el("button", { className: "btn btn-pink hover", textContent: "Next 💖" });
+      next.onclick = () => {
+        if (slideIndex === CONFIG.slides.length - 1) showQuestion();
+        else { slideIndex++; showSlide(); }
+      };
+      screen.replaceChildren(
+        el("div", { className: "stage" }, [
+          el("div", { className: "blob pink" }),
+          el("div", { className: "blob purple" }),
+          el("div", { className: "slide-grid" }, [
+            el("div", { className: "photo-wrap" }, [
+              el("div", { className: "card photo-card" }, [photo(image, "memory", "📸")]),
+            ]),
+            el("div", { className: "card text-card" }, [el("p", { textContent: text }), next]),
+          ]),
+        ])
+      );
+    }
+
+    function showQuestion() {
+      let attempts = 0;
+      const yes = el("button", { className: "btn btn-green hover yes", textContent: CONFIG.yesText });
+      yes.onclick = showCelebration;
+      const no = el("button", { className: "btn btn-pink no", textContent: CONFIG.noText });
+      const answers = el("div", { className: "answers" }, [yes, no]);
+      const card = el("div", { className: "card question-card" }, [
+        el("h2", { textContent: CONFIG.question }),
+        answers,
+      ]);
+
+      // Each click on "No" makes it vanish and reappear somewhere random, until it's gone for good
+      no.onclick = () => {
+        attempts++;
+        no.style.display = "none";
+        if (attempts >= CONFIG.noAttempts) {
+          no.remove();
+          card.appendChild(el("p", { className: "hint", textContent: CONFIG.noGoneHint }));
+          return;
+        }
+        setTimeout(() => {
+          no.classList.add("runaway");
+          no.style.top = Math.random() * 60 + 20 + "%";
+          no.style.left = Math.random() * 60 + 20 + "%";
+          no.style.display = "";
+        }, 300);
+      };
+
+      screen.replaceChildren(el("div", { className: "center-screen" }, [card]));
+    }
+
+    function showCelebration() {
+      const replay = el("button", { className: "btn btn-purple hover", textContent: "Replay 🔁" });
+      replay.onclick = () => { slideIndex = 0; showSlide(); };
+
+      const img = el("img", { src: CONFIG.celebrationImage, alt: "celebration" });
+      img.onerror = () => img.replaceWith(el("div", { className: "celebrate-emoji", textContent: "🎉🥰🎉" }));
+
+      const card = el("div", { className: "card celebrate-card" }, [
+        img,
+        el("h1", { textContent: CONFIG.celebrationTitle }),
+        el("p", { textContent: CONFIG.celebrationSubtitle }),
+        replay,
+      ]);
+      screen.replaceChildren(el("div", { className: "center-screen" }, [card]));
+      setTimeout(() => card.classList.add("show"), 200);
+    }
+
+    showSlide();
+  </script>
+</body>
+</html>
