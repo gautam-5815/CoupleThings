@@ -97,70 +97,68 @@ export default function LetterReader({ id }: { id: string }) {
 
   return (
     <Shell>
-      <article
-        className="sheet"
-        style={{
-          width: "min(100%, 54rem)",
-          background: "var(--paper)",
-          padding: "clamp(1.5rem, 4vw, 3.5rem)",
-          display: "grid",
-          gap: "clamp(1.25rem, 3vw, 2rem)",
-        }}
-      >
-        {/* progress, said in words rather than drawn as dots */}
-        <p className="small ink-muted">
-          {leafTitles[index]}, page {index + 1} of 5
-        </p>
-
-        {index === 0 && (
-          <p className="hand" style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", color: "var(--accent)", lineHeight: 1.1 }}>
-            For {letter.to}
-          </p>
-        )}
-
+      {/* The photograph takes the left half and the words the right, the way
+          a picture sits beside a letter. With no photograph the words take
+          the whole sheet rather than leaving half of it empty. */}
+      <article className="letter-sheet" data-with-picture={leaf.image ? "true" : "false"}>
         {leaf.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={leaf.image}
-            alt={leaf.imageAlt ?? "A photograph chosen for this page"}
-            style={{ width: "100%", maxHeight: "48svh", objectFit: "cover" }}
-          />
+          <figure className="letter-picture">
+            {/* A signed, expiring URL from private storage, so next/image
+                cannot pre-size it: a plain img is correct here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={leaf.image} alt={leaf.imageAlt ?? "A photograph chosen for this page"} />
+          </figure>
         )}
 
-        {isLast ? (
-          <FinalQuestion
-            question={letter.question}
-            yesLabel={letter.yesLabel}
-            noLabel={letter.noLabel}
-            onYes={() => setStage({ kind: "answered", yes: true })}
-            onNo={() => setStage({ kind: "answered", yes: false })}
-          />
-        ) : (
-          <p style={{ fontSize: "var(--step-lead)", lineHeight: 1.5, whiteSpace: "pre-line" }}>
-            {leaf.text}
+        <div className="letter-words">
+          <p className="small ink-muted">
+            {leafTitles[index]}, page {index + 1} of 5
           </p>
-        )}
 
-        <MusicPlayer src={leaf.audio} title={leaf.audioTitle} />
-
-        <div style={{ display: "flex", gap: "1rem", justifyContent: "space-between", flexWrap: "wrap" }}>
-          <button
-            className="btn btn-plain"
-            onClick={() => setStage({ kind: "leaf", index: Math.max(0, index - 1) })}
-            disabled={index === 0}
-          >
-            Back
-          </button>
-          {!isLast && (
-            <button className="btn" onClick={() => setStage({ kind: "leaf", index: index + 1 })}>
-              Next
-            </button>
+          {index === 0 && (
+            <p
+              className="hand"
+              style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", color: "var(--accent)", lineHeight: 1.1 }}
+            >
+              For {letter.to}
+            </p>
           )}
-        </div>
 
-        <p style={{ fontWeight: 500 }}>
-          {index === 4 ? `— ${letter.from}` : ""}
-        </p>
+          {isLast ? (
+            <FinalQuestion
+              question={letter.question}
+              yesLabel={letter.yesLabel}
+              noLabel={letter.noLabel}
+              onYes={() => setStage({ kind: "answered", yes: true })}
+              onNo={() => setStage({ kind: "answered", yes: false })}
+            />
+          ) : (
+            <p style={{ fontSize: "var(--step-lead)", lineHeight: 1.5, whiteSpace: "pre-line" }}>
+              {leaf.text}
+            </p>
+          )}
+
+          {isLast && letter.from && <p style={{ fontWeight: 500 }}>— {letter.from}</p>}
+
+          <div className="letter-foot">
+            <MusicPlayer src={leaf.audio} title={leaf.audioTitle} />
+
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "space-between", flexWrap: "wrap" }}>
+              <button
+                className="btn btn-plain"
+                onClick={() => setStage({ kind: "leaf", index: Math.max(0, index - 1) })}
+                disabled={index === 0}
+              >
+                Back
+              </button>
+              {!isLast && (
+                <button className="btn" onClick={() => setStage({ kind: "leaf", index: index + 1 })}>
+                  Next
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </article>
     </Shell>
   );

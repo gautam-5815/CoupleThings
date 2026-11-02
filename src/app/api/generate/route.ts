@@ -64,7 +64,10 @@ export async function POST(request: Request) {
   }
 
   const only = typeof body.section === "number" ? Math.trunc(body.section) : null;
-  const wanted = only !== null && only >= 0 && only < 4 ? [only] : [0, 1, 2, 3];
+  const single = only !== null && only >= 0 && only < 4;
+  const wanted = single ? [only] : [0, 1, 2, 3];
+  // The fifth page is the question, so a full draft writes that too.
+  const wantQuestion = !single;
 
   const system = [
     "You help someone write a short private letter to their partner.",
@@ -91,12 +94,36 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n");
 
-  const task =
-    wanted.length === 1
-      ? `Write ONLY this page: ${SECTIONS[wanted[0]]}. Return a JSON object {"pages":{"${wanted[0]}":"..."}}.`
-      : `Write these four pages:\n${wanted
-          .map((i) => `${i}. ${SECTIONS[i]}`)
-          .join("\n")}\nReturn a JSON object {"pages":{"0":"...","1":"...","2":"...","3":"..."}}.`;
+  const task = single
+    ? `Write ONLY this page: ${SECTIONS[wanted[0]]}. Return a JSON object {"pages":{"${wanted[0]}":"..."}}.`
+    : [
+        "Write the five pages of this letter. The first four are prose; the fifth is a single question.",
+        ...wanted.map((i) => `Page ${i}: ${SECTIONS[i]}`),
+        "Page 4: the question. One sentence, ending in a question mark, that this letter has earned.",
+        "  It must be answerable with yes. Ask for something small and real that the sender can actually",
+        "  do or offer, drawn from what they told you. Not 'do you forgive me' and not a marriage proposal",
+        "  unless they explicitly said so. Under 90 characters.",
+        "",
+        'Return a JSON object: {"pages":{"0":"...","1":"...","2":"...","3":"..."},"question":"...?"}',
+      ].join("\n");
+
+  // A strict schema, so the shape is guaranteed rather than hoped for.
+  // Asked politely in the prompt alone, the model kept dropping the question.
+  const pageProps = Object.fromEntries(wanted.map((i) => [String(i), { type: "string" }]));
+  const schema = {
+    type: "object",
+    properties: {
+      pages: {
+        type: "object",
+        properties: pageProps,
+        required: wanted.map(String),
+        additionalProperties: false,
+      },
+      ...(wantQuestion ? { question: { type: "string" } } : {}),
+    },
+    required: ["pages", ...(wantQuestion ? ["question"] : [])],
+    additionalProperties: false,
+  };
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -108,8 +135,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || "gpt-4o-mini",
         temperature: 0.8,
-        max_tokens: 700,
-        response_format: { type: "json_object" },
+        max_tokens: 900,
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "letter", strict: true, schema },
+        },
         messages: [
           { role: "system", content: system },
           { role: "user", content: `${facts}\n\n${task}` },
@@ -134,7 +164,10 @@ export async function POST(request: Request) {
 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(content) as { pages?: Record<string, unknown> };
+    const parsed = JSON.parse(content) as {
+      pages?: Record<string, unknown>;
+      question?: unknown;
+    };
 
     const pages: Record<number, string> = {};
     for (const index of wanted) {
@@ -144,6 +177,12 @@ export async function POST(request: Request) {
       }
     }
 
+    let question: string | undefined;
+    if (wantQuestion && typeof parsed.question === "string") {
+      const asked = parsed.question.trim().replace(/^["“]|["”]$/g, "");
+      if (asked) question = asked.slice(0, 120);
+    }
+
     if (Object.keys(pages).length === 0) {
       return NextResponse.json(
         { error: "Nothing usable came back. Try again, or write it yourself." },
@@ -151,7 +190,10 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ pages }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { pages, ...(question ? { question } : {}) },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("generate failed", error);
     return NextResponse.json(

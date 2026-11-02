@@ -232,7 +232,7 @@ export default function CreateFlow() {
               letter={letter}
               notes={notes}
               onNotes={setNotes}
-              onDrafted={(pages) => {
+              onDrafted={(pages, question) => {
                 setLetter((prev) => {
                   if (!prev) return prev;
                   const leaves = [...prev.leaves] as Experience["leaves"];
@@ -240,9 +240,13 @@ export default function CreateFlow() {
                     const i = Number(index);
                     if (i >= 0 && i < 4) leaves[i] = { ...leaves[i], text };
                   }
-                  return { ...prev, leaves };
+                  return { ...prev, leaves, ...(question ? { question } : {}) };
                 });
-                setNotice("Drafted. Every line is yours to change.");
+                setNotice(
+                  question
+                    ? "All five pages drafted, the question included. Every line is yours to change."
+                    : "Drafted. Every line is yours to change.",
+                );
               }}
             />
 

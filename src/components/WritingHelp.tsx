@@ -33,7 +33,7 @@ export default function WritingHelp({
   letter: Experience;
   notes: Notes;
   onNotes: (notes: Notes) => void;
-  onDrafted: (pages: Record<number, string>) => void;
+  onDrafted: (pages: Record<number, string>, question?: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +67,10 @@ export default function WritingHelp({
         return;
       }
 
-      onDrafted(body.pages as Record<number, string>);
+      onDrafted(
+        body.pages as Record<number, string>,
+        typeof body.question === "string" ? body.question : undefined,
+      );
       setOpen(false);
     } catch {
       setProblem("That did not work. Write the pages yourself, or try again.");
@@ -140,7 +143,7 @@ export default function WritingHelp({
 
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
         <button className="btn" onClick={draft} disabled={busy}>
-          {busy ? "Drafting…" : "Draft the first four pages"}
+          {busy ? "Drafting…" : "Draft all five pages"}
         </button>
         <button className="btn btn-plain" onClick={() => setOpen(false)} disabled={busy}>
           Close
