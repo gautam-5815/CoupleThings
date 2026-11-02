@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import MusicPlayer from "./MusicPlayer";
 import FinalQuestion from "./FinalQuestion";
 import { leafTitles, type Experience } from "@/lib/experience";
-import { fetchLetter, remoteEnabled } from "@/lib/letters";
+import { fetchLetter, remoteActive } from "@/lib/letters";
 
 type Stage = { kind: "leaf"; index: number } | { kind: "answered"; yes: boolean };
 
@@ -32,10 +32,10 @@ export default function LetterReader({ id }: { id: string }) {
       <Shell>
         <div style={{ display: "grid", gap: "1.5rem", maxWidth: "46ch" }}>
           <h1 className="head">
-            {remoteEnabled ? "There is no letter here." : "This letter is not on this device."}
+            {remoteActive() ? "There is no letter here." : "This letter is not on this device."}
           </h1>
           <p>
-            {remoteEnabled
+            {remoteActive()
               ? "The link may be mistyped, or whoever sent it has taken the letter down. Ask them for it again."
               : "No database is configured, so letters stay in the browser they were written in. Ask whoever sent it to open it where they wrote it."}
           </p>

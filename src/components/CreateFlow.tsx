@@ -13,7 +13,7 @@ import {
 } from "@/lib/experience";
 import {
   LetterError,
-  remoteEnabled,
+  remoteActive,
   removeLetter,
   saveLetter,
   startLetter,
@@ -395,7 +395,7 @@ export default function CreateFlow() {
               </button>
             </div>
 
-            {remoteEnabled ? (
+            {remoteActive() ? (
               <>
                 <p className="small ink-muted" style={{ maxWidth: "56ch" }}>
                   The letter is saved, so this link opens on any device you send it to. Only
@@ -450,9 +450,10 @@ export default function CreateFlow() {
               </>
             ) : (
               <p className="small ink-muted" style={{ maxWidth: "56ch" }}>
-                No database is configured, so this letter is kept in this browser on this device.
-                It is not on any server and nobody else can read it, but the link will not open
-                anywhere else, and clearing your browser data deletes it.
+                The database is not switched on, so this letter is kept in this browser on this
+                device. Nobody else can read it, but the link will not open anywhere else, and
+                clearing your browser data deletes it. Add the Supabase service-role key to
+                .env.local and restart to make links work everywhere.
               </p>
             )}
           </section>
