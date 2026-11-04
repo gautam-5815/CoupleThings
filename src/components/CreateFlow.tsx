@@ -13,7 +13,9 @@ import {
 } from "@/lib/experience";
 import {
   LetterError,
+  ensureRemote,
   remoteActive,
+  remoteProblem,
   removeLetter,
   saveLetter,
   startLetter,
@@ -97,7 +99,12 @@ export default function CreateFlow() {
   async function attach(file: File, kind: "image" | "audio") {
     setBusy(true);
     try {
-      updateLeaf(leafIndex, await uploadMedia(letter!, file, kind));
+      // A file needs a letter to belong to, so the row is created now if it
+      // does not exist yet. If the database cannot take it, the file is kept
+      // on this device instead and nothing is lost.
+      const live = await ensureRemote(letter!);
+      setLetter(live);
+      updateLeaf(leafIndex, await uploadMedia(live, file, kind));
       setError(null);
     } catch (e) {
       report(e);
@@ -109,9 +116,18 @@ export default function CreateFlow() {
   async function publish() {
     setBusy(true);
     try {
-      setLetter(await saveLetter(letter!, true));
+      const live = await ensureRemote(letter!);
+      const saved = await saveLetter(live, true);
+      setLetter(saved);
       setStep(3);
       setError(null);
+      setNotice(
+        saved.remote
+          ? null
+          : remoteActive()
+            ? "Saved on this device only: the database would not accept it. Your writing is safe, and the link opens here, but not on another device."
+            : "Saved on this device only, because no database is set up yet. The link opens here, but not on another device.",
+      );
     } catch (e) {
       report(e);
     } finally {
@@ -399,7 +415,7 @@ export default function CreateFlow() {
               </button>
             </div>
 
-            {remoteActive() ? (
+            {letter.remote ? (
               <>
                 <p className="small ink-muted" style={{ maxWidth: "56ch" }}>
                   The letter is saved, so this link opens on any device you send it to. Only
@@ -453,12 +469,38 @@ export default function CreateFlow() {
                 </div>
               </>
             ) : (
-              <p className="small ink-muted" style={{ maxWidth: "56ch" }}>
-                The database is not switched on, so this letter is kept in this browser on this
-                device. Nobody else can read it, but the link will not open anywhere else, and
-                clearing your browser data deletes it. Add the Supabase service-role key to
-                .env.local and restart to make links work everywhere.
-              </p>
+              <div style={{ display: "grid", gap: "1rem" }}>
+                <p className="small ink-muted" style={{ maxWidth: "56ch" }}>
+                  This letter is kept in this browser, on this device. Nobody else can read it,
+                  but the link will only open here, and clearing your browser data deletes it.
+                  {remoteActive()
+                    ? " The database turned it away; once that is fixed, publish again and the link will work anywhere."
+                    : " Set up the database and publish again to make the link work anywhere."}
+                </p>
+                <button
+                  className="btn btn-plain"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const live = await ensureRemote(letter);
+                      const saved = await saveLetter(live, true);
+                      setLetter(saved);
+                      setNotice(
+                        saved.remote
+                          ? "Saved to the database. The link now opens anywhere."
+                          : `Still on this device only. ${remoteProblem() ?? "The database is not reachable"}.`,
+                      );
+                    } catch (e) {
+                      report(e);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Try saving it to the database again
+                </button>
+              </div>
             )}
           </section>
         )}

@@ -129,33 +129,57 @@ function toPayload(letter: Experience) {
   };
 }
 
-/** Create the draft row, so uploads have something to belong to. */
+/**
+ * Begin a letter. This deliberately touches nothing but this device: the
+ * database is not asked for anything until there is something worth storing.
+ * Writing the first page should never fail because a server is unwell.
+ */
 export async function startLetter(letter: Experience): Promise<Experience> {
-  if (remoteActive()) {
-    try {
-      const body = await unwrap(
-        await fetch("/api/letters", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(toPayload(letter)),
-        }),
-      );
-      rememberToken(body.id, body.ownerToken);
-      return { ...letter, id: body.id, ownerToken: body.ownerToken };
-    } catch (error) {
-      if (!(error instanceof NotConfigured)) throw error;
-      stepDown();
-    }
-  }
-
   saveExperience(letter);
   return letter;
+}
+
+/**
+ * Make sure the letter has a row of its own, creating one the first time it
+ * is really needed: when a file must be attached to it, or when it is
+ * published. Returns the letter as it now stands, which carries the server's
+ * id and owner token once a row exists.
+ *
+ * If the database cannot take it, this does NOT throw. The letter stays on
+ * this device and `remote` stays false, so the caller can say so plainly
+ * instead of losing what someone has written.
+ */
+export async function ensureRemote(letter: Experience): Promise<Experience> {
+  if (!remoteActive() || letter.remote) return letter;
+
+  try {
+    const body = await unwrap(
+      await fetch("/api/letters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toPayload(letter)),
+      }),
+    );
+    rememberToken(body.id, body.ownerToken);
+    return { ...letter, id: body.id, ownerToken: body.ownerToken, remote: true };
+  } catch (error) {
+    if (error instanceof NotConfigured) stepDown();
+    else lastRemoteProblem = error instanceof Error ? error.message : "The database refused it.";
+    return letter;
+  }
+}
+
+/** Why the last remote attempt failed, for the interface to repeat honestly. */
+let lastRemoteProblem: string | null = null;
+
+export function remoteProblem() {
+  return lastRemoteProblem;
 }
 
 export async function saveLetter(letter: Experience, published?: boolean): Promise<Experience> {
   const next = published === undefined ? letter : { ...letter, published };
 
-  if (remoteActive()) {
+  if (remoteActive() && letter.remote) {
     try {
       await unwrap(
         await fetch(`/api/letters/${encodeURIComponent(letter.id)}`, {
@@ -168,10 +192,16 @@ export async function saveLetter(letter: Experience, published?: boolean): Promi
           }),
         }),
       );
+      lastRemoteProblem = null;
       return next;
     } catch (error) {
-      if (!(error instanceof NotConfigured)) throw error;
-      stepDown();
+      if (error instanceof NotConfigured) stepDown();
+      else {
+        // Keep the writing. Say so rather than throwing it away.
+        lastRemoteProblem = error instanceof Error ? error.message : "The database refused it.";
+        saveExperience({ ...next, remote: false });
+        return { ...next, remote: false };
+      }
     }
   }
 
@@ -190,11 +220,17 @@ export async function fetchLetter(id: string): Promise<Experience | null> {
     const response = await fetch(`/api/letters/${encodeURIComponent(id)}${query}`, {
       cache: "no-store",
     });
-    if (response.status === 404) return null;
+    // Not in the database: it may still be a letter kept on this device,
+    // either written before the database was set up or saved here when it
+    // refused. Look there before giving up.
+    if (response.status === 404) return loadExperience(id);
     body = await unwrap(response);
   } catch (error) {
-    if (!(error instanceof NotConfigured)) throw error;
-    stepDown();
+    if (error instanceof NotConfigured) stepDown();
+    else lastRemoteProblem = error instanceof Error ? error.message : "The database did not answer.";
+
+    // The database could not answer. A copy may still be on this device,
+    // either written before it was set up or kept here when it refused.
     return loadExperience(id);
   }
 
@@ -203,6 +239,7 @@ export async function fetchLetter(id: string): Promise<Experience | null> {
     ownerToken: token ?? "",
     createdAt: body.createdAt,
     published: body.published,
+    remote: true,
     from: body.from,
     to: body.to,
     occasion: body.occasion,
@@ -245,7 +282,7 @@ export async function uploadMedia(
   file: File,
   kind: "image" | "audio",
 ): Promise<Partial<Leaf>> {
-  if (remoteActive()) {
+  if (remoteActive() && letter.remote) {
     try {
       const form = new FormData();
       form.set("file", file);

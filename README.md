@@ -19,7 +19,13 @@ wrote it. The interface says so rather than pretending otherwise.
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor → New query**, paste [`supabase/schema.sql`](supabase/schema.sql), and run it.
-   That creates the `letters` table and the private `letter-media` bucket.
+   That creates the `letters` table.
+
+   The script does not touch the storage schema on purpose. Supabase owns it,
+   the SQL editor usually cannot write to it, and because the editor runs a
+   script as a single transaction, one refused statement there silently rolls
+   back the table as well. The bucket is created separately in step 5.
+
 3. Copy `.env.example` to `.env.local` and fill in:
 
    | Variable | Where it comes from |
@@ -28,7 +34,23 @@ wrote it. The interface says so rather than pretending otherwise.
    | `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API Keys → `service_role` |
    | `NEXT_PUBLIC_SITE_URL` | your public origin |
 
-4. Restart `npm run dev`. The app switches over on its own.
+   `node scripts/set-env.ps1` can fill the secrets in from a masked prompt, so
+   they never pass through a clipboard history or your shell history.
+
+4. Create the private media bucket:
+
+   ```bash
+   node scripts/setup-storage.mjs
+   ```
+
+5. Check it all landed, then restart `npm run dev`:
+
+   ```bash
+   node scripts/check-supabase.mjs
+   ```
+
+   It tests reading **and writing**, and the bucket. Reading alone is not
+   enough: a `SELECT` can succeed against a table that `INSERT` cannot reach.
 
 Deploying to Vercel's free tier: push the repo, import it, and add the same
 three variables in the project settings.

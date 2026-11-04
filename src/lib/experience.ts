@@ -34,6 +34,11 @@ export type Experience = {
   noLabel: string;
   closing: string;
   published: boolean;
+  /**
+   * True once the letter has a row of its own in the database. Until then it
+   * lives only in this browser, and the interface says so.
+   */
+  remote: boolean;
 };
 
 export const occasions: { value: Occasion; label: string; opener: string }[] = [
@@ -86,6 +91,7 @@ export function emptyExperience(to = "", occasion: Occasion = "apology"): Experi
     noLabel: "Not yet",
     closing: "Thank you for reading all of it.",
     published: false,
+    remote: false,
   };
 }
 

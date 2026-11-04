@@ -58,8 +58,15 @@ function leaf(value: unknown, index: number): Leaf {
   };
 }
 
-/** The shape stored in the database. Ids and tokens are handled separately. */
-export type StoredPayload = Omit<Experience, "id" | "ownerToken" | "published" | "createdAt">;
+/**
+ * The shape stored in the database. Ids, tokens and the published flag are
+ * columns of their own, and `remote` is state belonging to the browser: it
+ * says where this copy lives, which the database has no business recording.
+ */
+export type StoredPayload = Omit<
+  Experience,
+  "id" | "ownerToken" | "published" | "createdAt" | "remote"
+>;
 
 export function parsePayload(input: unknown): StoredPayload {
   if (typeof input !== "object" || input === null) {

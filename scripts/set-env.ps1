@@ -70,6 +70,16 @@ if ($service) {
     Set-Key 'SUPABASE_SERVICE_ROLE_KEY' $service
 }
 
+$database = Read-Secret 'Postgres connection string (optional, press Enter to skip)'
+if ($database) {
+    if (-not $database.StartsWith('postgres')) {
+        Write-Host "That does not look like a postgres:// URI. Skipped." -ForegroundColor Yellow
+    } else {
+        Set-Key 'DATABASE_URL' $database
+        Write-Host "Connection string saved." -ForegroundColor Green
+    }
+}
+
 $openai = Read-Secret 'OpenAI API key (optional, press Enter to skip)'
 if ($openai) {
     if (-not $openai.StartsWith('sk-')) {
