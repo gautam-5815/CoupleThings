@@ -1,9 +1,27 @@
+const FALLBACK_URL = "https://couplethings.app";
+
+/**
+ * Environment variables arrive from wherever someone pasted them, and a
+ * stray byte-order mark or line ending is invisible in a dashboard. An
+ * unusable value must not take the whole build down, so it is cleaned and
+ * checked here, once, and anything hopeless falls back.
+ */
+function readSiteUrl(raw: string | undefined): string {
+  const cleaned = raw?.replace(/^﻿/, "").replace(/\\[rn]/g, "").trim();
+  if (!cleaned) return FALLBACK_URL;
+  try {
+    return new URL(cleaned).origin;
+  } catch {
+    return FALLBACK_URL;
+  }
+}
+
 export const site = {
   name: "Couple Things",
   tagline: "A letter only one person can open.",
   description:
     "Write your partner a private five-page letter — photos, music, your own words and one last question — and send it as a single secret link. Free, no account, nothing public.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://couplethings.app",
+  url: readSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
 } as const;
 
 /** Public pages that belong in the sitemap. Experiences never do. */

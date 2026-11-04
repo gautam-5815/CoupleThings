@@ -33,13 +33,25 @@ function env() {
 
 const values = env();
 
+function run(args) {
+  return new Promise((resolve) => {
+    const child = spawn("npx", ["--yes", "vercel", ...args], {
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32",
+    });
+    child.stdout.on("data", () => {});
+    child.stderr.on("data", () => {});
+    child.on("close", resolve);
+  });
+}
+
 function add(name, value, target) {
   return new Promise((resolve) => {
-    const child = spawn(
-      process.platform === "win32" ? "npx.cmd" : "npx",
-      ["--yes", "vercel", "env", "add", name, target],
-      { stdio: ["pipe", "pipe", "pipe"] },
-    );
+    // Windows needs a shell to run npx.cmd; Node refuses to spawn it directly.
+    const child = spawn("npx", ["--yes", "vercel", "env", "add", name, target], {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: process.platform === "win32",
+    });
 
     let err = "";
     child.stdout.on("data", () => {});
@@ -57,15 +69,39 @@ function add(name, value, target) {
   });
 }
 
+// The live site has a different address from your machine, so the public
+// site URL is passed in rather than copied from .env.local:
+//   node scripts/push-env-to-vercel.mjs --site-url https://your-app.vercel.app
+const flag = process.argv.indexOf("--site-url");
+const siteUrl = flag > -1 ? process.argv[flag + 1]?.trim() : null;
+
+if (siteUrl) {
+  try {
+    new URL(siteUrl);
+  } catch {
+    console.log(`"${siteUrl}" is not a valid URL.`);
+    process.exit(1);
+  }
+}
+
 console.log("Copying secrets from .env.local into Vercel.\n");
 
 for (const name of WANTED) {
-  const value = values[name];
-  if (!value) {
-    console.log(`  ${name}: not in .env.local, skipped`);
-    continue;
-  }
+  const isSiteUrl = name === "NEXT_PUBLIC_SITE_URL";
+
   for (const target of TARGETS) {
+    // Production and preview get the live address; development keeps
+    // whatever .env.local says, which is your own machine.
+    const value = isSiteUrl && siteUrl && target !== "development" ? siteUrl : values[name];
+
+    if (!value) {
+      console.log(`  ${name} -> ${target}: no value, skipped`);
+      continue;
+    }
+
+    // Replace rather than skip, so re-running this syncs an edited value
+    // instead of silently leaving the old one in place.
+    await run(["env", "rm", name, target, "--yes"]);
     await add(name, value, target);
   }
 }
