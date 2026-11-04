@@ -42,3 +42,4 @@ next-env.d.ts
 
 # design skill working files (screenshots, reports)
 .taste-skill/
+.vercel
