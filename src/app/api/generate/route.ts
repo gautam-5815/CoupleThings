@@ -30,8 +30,18 @@ function clean(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+/**
+ * Environment values arrive with whatever whitespace the tool that set them
+ * left behind. `vercel env add` keeps a trailing newline, and OpenAI rejects
+ * "gpt-4o-mini\n" as an invalid model ID, so everything is trimmed here.
+ */
+function envValue(name: string) {
+  const raw = process.env[name];
+  return raw?.replace(/^﻿/, "").trim() || undefined;
+}
+
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = envValue("OPENAI_API_KEY");
   if (!apiKey) {
     return NextResponse.json({ error: "not-configured" }, { status: 501 });
   }
@@ -133,7 +143,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        model: envValue("OPENAI_MODEL") || "gpt-4o-mini",
         temperature: 0.8,
         max_tokens: 900,
         response_format: {
@@ -151,15 +161,19 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error("openai failed", response.status, detail.slice(0, 300));
-      return NextResponse.json(
-        {
-          error:
-            response.status === 401
-              ? "The writing help is not set up correctly on this deployment."
-              : "The writing help is busy. Write the page yourself, or try again shortly.",
-        },
-        { status: 502 },
-      );
+
+      // Say which kind of problem it is. "Busy" for a misconfiguration sends
+      // someone away to wait for something that will never come right.
+      const message =
+        response.status === 401 || response.status === 403
+          ? "The writing help is not set up correctly here: its key was refused."
+          : response.status === 429
+            ? "The writing help has hit its usage limit. Write the page yourself, or try again later."
+            : response.status === 400 || response.status === 404
+              ? "The writing help is misconfigured on this deployment and cannot run."
+              : "The writing help is busy. Write the page yourself, or try again shortly.";
+
+      return NextResponse.json({ error: message }, { status: 502 });
     }
 
     const data = await response.json();

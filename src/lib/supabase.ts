@@ -8,8 +8,18 @@ import { createHash, timingSafeEqual } from "node:crypto";
  * on the server and only inside API routes. The "server-only" import above
  * makes the build fail if a client component ever reaches for this file.
  */
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+/**
+ * Trimmed, because tools that set environment variables leave whitespace
+ * behind: `vercel env add` keeps a trailing newline, and a pasted value can
+ * carry a byte-order mark. A key with a stray newline fails in ways that
+ * look nothing like the real cause.
+ */
+function envValue(name: string) {
+  return process.env[name]?.replace(/^﻿/, "").trim() || undefined;
+}
+
+const url = envValue("NEXT_PUBLIC_SUPABASE_URL");
+const serviceKey = envValue("SUPABASE_SERVICE_ROLE_KEY");
 
 export const MEDIA_BUCKET = "letter-media";
 
